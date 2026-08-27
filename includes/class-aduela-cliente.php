@@ -49,8 +49,8 @@ class Aduela_Cliente {
 	}
 
 	/** POST numa rota do canal. */
-	public function enviar( $caminho, $corpo ) {
-		return $this->pedir( 'POST', $caminho, $corpo );
+	public function enviar( $caminho, $corpo, $metodo = 'POST' ) {
+		return $this->pedir( $metodo, $caminho, $corpo );
 	}
 
 	/**
