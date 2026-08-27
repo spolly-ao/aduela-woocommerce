@@ -78,6 +78,12 @@ class Aduela_Sincronizacao {
 		// isto, uma encomenda perdida ficava perdida até alguém reparar.
 		Aduela_Encomendas::enviar_as_que_faltam( $cliente );
 
+		// **E confirma-se que o Aduela sabe por onde nos avisar.** Cartão `36.32`.
+		// Corre em cada passagem e quase nunca fala: só quando o endereço desta
+		// loja mudou, ou quando ainda não há segredo. Sem isto, uma loja que mude
+		// de domínio deixava de receber os avisos em silêncio.
+		Aduela_Retorno::garantir_registo( $cliente );
+
 		update_option(
 			self::ESTADO,
 			array(

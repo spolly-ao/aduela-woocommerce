@@ -374,6 +374,22 @@ class Aduela_Definicoes {
 						<td><strong><?php echo esc_html( $estado['criados'] ); ?></strong></td>
 					</tr>
 					<tr>
+						<td><?php esc_html_e( 'O Aduela sabe avisar esta loja', 'aduela-woocommerce' ); ?></td>
+						<td>
+							<?php $retorno = Aduela_Retorno::estado(); ?>
+							<strong>
+								<?php echo esc_html( $retorno['ligado'] ? __( 'Sim', 'aduela-woocommerce' ) : __( 'Ainda não', 'aduela-woocommerce' ) ); ?>
+							</strong>
+							<?php if ( $retorno['ligado'] ) : ?>
+								<p class="description"><code><?php echo esc_html( $retorno['url'] ); ?></code></p>
+							<?php else : ?>
+								<p class="description">
+									<?php esc_html_e( 'Sem isto, uma mudança de estado feita no Aduela não chega aqui. Regista-se sozinho na próxima sincronização.', 'aduela-woocommerce' ); ?>
+								</p>
+							<?php endif; ?>
+						</td>
+					</tr>
+					<tr>
 						<td><?php esc_html_e( 'Encomendas por enviar', 'aduela-woocommerce' ); ?></td>
 						<td><strong><?php echo esc_html( $estado['por_enviar'] ); ?></strong></td>
 					</tr>
