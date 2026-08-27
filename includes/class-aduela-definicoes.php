@@ -2,9 +2,17 @@
 /**
  * O ecrã de definições, no painel do WordPress.
  *
- * Duas coisas para escrever (o endereço e a chave), dois botões, e o estado da
- * última sincronização. Mais nada: tudo o resto configura-se no Aduela, e
- * duplicá-lo aqui daria dois sítios a decidir a mesma coisa.
+ * O endereço, a chave, o que fazer com os artigos que esta loja não tem, dois
+ * botões, e o estado da última sincronização. Mais nada: tudo o resto
+ * configura-se no Aduela, e duplicá-lo aqui daria dois sítios a decidir a mesma
+ * coisa.
+ *
+ * # A escolha dos artigos em falta vive aqui, e o botão vive no catálogo
+ *
+ * São duas perguntas diferentes. Esta é *"o que quero que aconteça sozinho de
+ * quinze em quinze minutos?"*, e a resposta por defeito é nada. A outra é *"quero
+ * este artigo à venda agora?"*, e essa responde-se a olhar para a lista, no ecrã
+ * do Catálogo do Aduela.
  *
  * # Os dois botões respondem a perguntas diferentes
  *
@@ -39,8 +47,9 @@ class Aduela_Definicoes {
 		return wp_parse_args(
 			is_array( $gravado ) ? $gravado : array(),
 			array(
-				'endereco' => '',
-				'chave'    => '',
+				'endereco'       => '',
+				'chave'          => '',
+				'criar_em_falta' => 'nao',
 			)
 		);
 	}
@@ -78,9 +87,16 @@ class Aduela_Definicoes {
 		$endereco = isset( $bruto['endereco'] ) ? esc_url_raw( trim( $bruto['endereco'] ) ) : '';
 		$chave    = isset( $bruto['chave'] ) ? sanitize_text_field( trim( $bruto['chave'] ) ) : '';
 
+		$criar = isset( $bruto['criar_em_falta'] ) ? sanitize_key( $bruto['criar_em_falta'] ) : 'nao';
+
+		if ( ! in_array( $criar, array( 'nao', 'rascunho', 'publicar' ), true ) ) {
+			$criar = 'nao';
+		}
+
 		return array(
-			'endereco' => $endereco,
-			'chave'    => '' !== $chave ? $chave : $atual['chave'],
+			'endereco'       => $endereco,
+			'chave'          => '' !== $chave ? $chave : $atual['chave'],
+			'criar_em_falta' => $criar,
 		);
 	}
 
@@ -148,12 +164,25 @@ class Aduela_Definicoes {
 			(int) $feito['artigos']
 		);
 
+		if ( ! empty( $feito['criados'] ) ) {
+			$mensagem .= ' ' . sprintf(
+				/* translators: %d: produtos criados nesta loja */
+				_n(
+					'%d produto foi criado aqui, porque as definições mandam criar os que faltam.',
+					'%d produtos foram criados aqui, porque as definições mandam criar os que faltam.',
+					(int) $feito['criados'],
+					'aduela-woocommerce'
+				),
+				(int) $feito['criados']
+			);
+		}
+
 		if ( ! empty( $feito['sem_produto'] ) ) {
 			$mensagem .= ' ' . sprintf(
 				/* translators: %d: artigos sem produto correspondente */
 				_n(
-					'%d artigo do Aduela não existe nesta loja e foi ignorado: o plugin não cria produtos, casa-os pelo SKU.',
-					'%d artigos do Aduela não existem nesta loja e foram ignorados: o plugin não cria produtos, casa-os pelo SKU.',
+					'%d artigo do Aduela não existe nesta loja e ficou de fora. Publique-o no Catálogo do Aduela, ou mude a opção nas definições.',
+					'%d artigos do Aduela não existem nesta loja e ficaram de fora. Publique-os no Catálogo do Aduela, ou mude a opção nas definições.',
 					(int) $feito['sem_produto'],
 					'aduela-woocommerce'
 				),
@@ -234,6 +263,29 @@ class Aduela_Definicoes {
 							</p>
 						</td>
 					</tr>
+					<tr>
+						<th scope="row">
+							<label for="aduela-criar"><?php esc_html_e( 'Artigos que esta loja não tem', 'aduela-woocommerce' ); ?></label>
+						</th>
+						<td>
+							<select id="aduela-criar" name="<?php echo esc_attr( self::OPCAO ); ?>[criar_em_falta]">
+								<option value="nao" <?php selected( $opcoes['criar_em_falta'], 'nao' ); ?>>
+									<?php esc_html_e( 'Ignorar (recomendado)', 'aduela-woocommerce' ); ?>
+								</option>
+								<option value="rascunho" <?php selected( $opcoes['criar_em_falta'], 'rascunho' ); ?>>
+									<?php esc_html_e( 'Criar como rascunho', 'aduela-woocommerce' ); ?>
+								</option>
+								<option value="publicar" <?php selected( $opcoes['criar_em_falta'], 'publicar' ); ?>>
+									<?php esc_html_e( 'Criar e publicar', 'aduela-woocommerce' ); ?>
+								</option>
+							</select>
+							<p class="description">
+								<?php esc_html_e( 'O que a sincronização automática faz com um artigo do Aduela que não exista nesta loja.', 'aduela-woocommerce' ); ?>
+								<br />
+								<?php esc_html_e( 'Fica em Ignorar de propósito: um produto criado sozinho vai direto para a montra sem ninguém o ver, e sem categoria nem texto de venda. Para escolher um a um, use o Catálogo do Aduela.', 'aduela-woocommerce' ); ?>
+							</p>
+						</td>
+					</tr>
 				</table>
 
 				<?php submit_button(); ?>
@@ -263,10 +315,14 @@ class Aduela_Definicoes {
 							<strong><?php echo esc_html( $estado['sem_produto'] ); ?></strong>
 							<?php if ( $estado['sem_produto'] ) : ?>
 								<p class="description">
-									<?php esc_html_e( 'O plugin casa pelo SKU e não cria produtos. Crie-os no WooCommerce com o mesmo SKU do Aduela, e a passagem seguinte trata do preço e do stock.', 'aduela-woocommerce' ); ?>
+									<?php esc_html_e( 'Publique-os no Catálogo do Aduela, um a um ou de uma vez, ou mude a opção acima para a passagem os criar sozinha.', 'aduela-woocommerce' ); ?>
 								</p>
 							<?php endif; ?>
 						</td>
+					</tr>
+					<tr>
+						<td><?php esc_html_e( 'Produtos criados na última passagem', 'aduela-woocommerce' ); ?></td>
+						<td><strong><?php echo esc_html( $estado['criados'] ); ?></strong></td>
 					</tr>
 					<tr>
 						<td><?php esc_html_e( 'Encomendas por enviar', 'aduela-woocommerce' ); ?></td>

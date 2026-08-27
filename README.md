@@ -16,23 +16,43 @@ primeira correção. **Aqui há só a cola** entre os ganchos do WooCommerce e a
 | Encomendas | WooCommerce para Aduela | No gancho do pagamento, e o cron apanha as que falharem |
 
 **O Aduela manda no catálogo, e o canal manda nas encomendas.** Quem tem o stock
-a sério é quem o conta na prateleira. O que é da montra (título, descrição longa,
-imagens, categorias, SEO) fica do lojista, porque é ele que sabe vender no site
+a sério é quem o conta na prateleira. O que é da montra (descrição longa,
+categorias, etiquetas, SEO) fica do lojista, porque é ele que sabe vender no site
 dele.
 
 **Casa-se pelo SKU.** O nome muda; o SKU é o que ninguém mexe depois de o
 começar a usar.
 
-**Um artigo do Aduela que a loja não tenha é ignorado, e não criado.** Criar
-produtos aqui era criar montra por conta do lojista, com fotografias em falta e
-categorias erradas, num sítio que é a cara do negócio dele. Quem decide o que
-está à venda no site é ele.
+## Pôr os artigos do Aduela à venda
 
-É a parte que mais confunde quem instala isto pela primeira vez, e por isso o
-ecrã conta-a: em **WooCommerce → Aduela** vê quantos artigos vieram, quantos
-foram atualizados, e **quantos não existem nesta loja**. Se o terceiro número não
-for zero, crie esses produtos no WooCommerce com o mesmo SKU, e a passagem
-seguinte trata do preço e do stock.
+Em **WooCommerce → Catálogo do Aduela** está o catálogo inteiro, com o que esta
+loja já tem ao lado. Cada artigo que a loja não tenha traz dois botões:
+
+- **Publicar** cria o produto e põe-no à venda;
+- **Rascunho** cria-o em rascunho, para lhe mexer antes de o mostrar.
+
+E em cima há os dois equivalentes para **todos os que faltam de uma vez**.
+
+Um produto criado assim leva o SKU, o nome, a descrição da ficha, o preço, a
+existência e **a fotografia do artigo**, copiada para a biblioteca do WordPress.
+Não leva categoria nem texto de venda, e o IVA fica pelas regras de imposto da
+loja: são as decisões de quem vende no site, e o ERP não as sabe.
+
+**Carregar duas vezes não duplica.** O SKU é a chave: um artigo que já cá esteja
+atualiza-se em vez de nascer outra vez.
+
+### E automaticamente?
+
+Em **WooCommerce → Aduela** há a opção **Artigos que esta loja não tem**, com
+três respostas: `Ignorar`, `Criar como rascunho` e `Criar e publicar`. Ela decide
+o que a sincronização de quinze em quinze minutos faz.
+
+**Nasce em Ignorar**, de propósito: um produto criado sozinho vai direto para a
+montra sem ninguém o ter visto. Quem preferir escolher um a um tem o ecrã de
+cima; quem quiser a loja toda em espelho põe a opção em `Criar e publicar`.
+
+Enquanto estiver em `Ignorar`, o ecrã conta quantos artigos ficaram de fora, para
+que a decisão não seja silenciosa.
 
 ## Instalar
 
@@ -45,6 +65,8 @@ seguinte trata do preço e do stock.
 4. Carregar em **Sincronizar agora** para não esperar pelo `wp-cron`, e ler o
    que ele diz: quantos artigos vieram, quantos foram atualizados, e quantos
    não existem nesta loja.
+5. Se o último número não for zero, ir a **WooCommerce → Catálogo do Aduela** e
+   publicar os que faltam.
 
 Precisa de WordPress 6.0 ou mais recente, PHP 7.4 ou mais recente, e WooCommerce
 7.0 ou mais recente. **Testado até ao WooCommerce 11.0**, e o plugin diz no
@@ -104,6 +126,8 @@ zip -r aduela-woocommerce.zip aduela-woocommerce -x '*.git*'
 | `aduela_wc_fila` | As encomendas que ainda não subiram |
 | `_aduela_venda_id` | Na encomenda: o número da venda no Aduela |
 | `_aduela_erro` | Na encomenda: o motivo de não ter subido |
+| `_aduela_criado` | No produto: quando o plugin o criou. Distingue-o de um escrito à mão |
+| `_aduela_imagem_url` | No produto: de onde veio a fotografia, para não voltar a descarregá-la |
 
 Desativar o plugin tira o `wp-cron` e deixa o resto: reativar não perde a
 ligação nem repete encomendas.

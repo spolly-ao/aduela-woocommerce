@@ -127,6 +127,7 @@ function aduela_wc_avisa_da_versao() {
 require_once ADUELA_WC_PASTA . 'includes/class-aduela-cliente.php';
 require_once ADUELA_WC_PASTA . 'includes/class-aduela-definicoes.php';
 require_once ADUELA_WC_PASTA . 'includes/class-aduela-sincronizacao.php';
+require_once ADUELA_WC_PASTA . 'includes/class-aduela-catalogo.php';
 require_once ADUELA_WC_PASTA . 'includes/class-aduela-encomendas.php';
 
 /** Arranca o plugin, depois de os outros carregarem. */
@@ -139,6 +140,7 @@ function aduela_wc_arrancar() {
 
 	Aduela_Definicoes::registar();
 	Aduela_Sincronizacao::registar();
+	Aduela_Catalogo::registar();
 	Aduela_Encomendas::registar();
 }
 add_action( 'plugins_loaded', 'aduela_wc_arrancar' );

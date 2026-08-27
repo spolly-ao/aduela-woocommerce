@@ -34,7 +34,11 @@ percorrer os dois sentidos:
 1. **Catálogo para baixo:** criar um artigo no Aduela com um SKU que a loja já
    tenha, carregar em **Sincronizar agora**, e confirmar que o preço e o stock
    mudaram no WooCommerce.
-2. **Encomendas para cima:** fazer uma encomenda na loja, pagá-la, e confirmar
+2. **Publicar um artigo novo:** criar um artigo no Aduela com um SKU que a loja
+   não tenha e com fotografia, ir a **WooCommerce → Catálogo do Aduela**, e
+   confirmar que **Publicar** cria o produto com a imagem. Carregar outra vez no
+   mesmo SKU não pode dar um segundo produto.
+3. **Encomendas para cima:** fazer uma encomenda na loja, pagá-la, e confirmar
    que a venda aparece no Aduela com a referência `WOO-<número>`.
 
 ## Estilo

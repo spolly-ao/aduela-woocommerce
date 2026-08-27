@@ -45,6 +45,7 @@ class Aduela_Sincronizacao {
 			'artigos'     => isset( $gravado['artigos'] ) ? (int) $gravado['artigos'] : 0,
 			'vieram'      => isset( $gravado['vieram'] ) ? (int) $gravado['vieram'] : 0,
 			'sem_produto' => isset( $gravado['sem_produto'] ) ? (int) $gravado['sem_produto'] : 0,
+			'criados'     => isset( $gravado['criados'] ) ? (int) $gravado['criados'] : 0,
 			'erro'        => isset( $gravado['erro'] ) ? $gravado['erro'] : '',
 			'por_enviar'  => Aduela_Encomendas::quantas_por_enviar(),
 		);
@@ -65,6 +66,7 @@ class Aduela_Sincronizacao {
 				'artigos'     => 0,
 				'vieram'      => 0,
 				'sem_produto' => 0,
+				'criados'     => 0,
 				'erro'        => __( 'Falta o endereço ou a chave.', 'aduela-woocommerce' ),
 			);
 		}
@@ -83,6 +85,7 @@ class Aduela_Sincronizacao {
 				'artigos'     => $resultado['artigos'],
 				'vieram'      => $resultado['vieram'],
 				'sem_produto' => $resultado['sem_produto'],
+				'criados'     => $resultado['criados'],
 				'erro'        => $resultado['erro'],
 			),
 			false
@@ -98,15 +101,16 @@ class Aduela_Sincronizacao {
 	 * identificador é de cada sistema; o SKU é o que ninguém mexe depois de o
 	 * cliente o começar a usar.
 	 *
-	 * **Um artigo que o WooCommerce não tenha é ignorado, e não criado.** Criar
-	 * produtos aqui era criar montra por conta do lojista: fotografias em falta,
-	 * descrições vazias e categorias erradas, num sítio que é a cara do negócio
-	 * dele. Quem decide o que está à venda no site é ele.
+	 * **Um artigo que o WooCommerce não tenha é ignorado por defeito.** Criar
+	 * produtos sem ninguém pedir era criar montra por conta do lojista:
+	 * fotografias em falta, descrições vazias e categorias erradas, num sítio que
+	 * é a cara do negócio dele.
 	 *
-	 * **O que mudou é a decisão deixar de ser silenciosa.** Ela continua igual, e
-	 * o que se conta agora é quantos artigos ficaram de fora por não existirem
-	 * aqui: sem esse número, quem instala o plugin e não vê nada a mexer não tem
-	 * como descobrir que a bola está do lado dele.
+	 * **Mas a decisão passou a ser dele, e não do plugin.** Quem quiser que a
+	 * passagem os crie liga-o nas definições, como rascunho ou já publicados; e
+	 * quem quiser escolher um a um tem o ecrã do catálogo. Enquanto estiver em
+	 * `nao`, o que se conta é quantos ficaram de fora, que é o número sem o qual
+	 * ninguém percebe que a bola está do lado dele.
 	 */
 	private static function descer_catalogo( $cliente ) {
 		$resposta = $cliente->obter( '/api/v1/integracoes/canais/catalogo' );
@@ -116,6 +120,7 @@ class Aduela_Sincronizacao {
 				'artigos'     => 0,
 				'vieram'      => 0,
 				'sem_produto' => 0,
+				'criados'     => 0,
 				'erro'        => $resposta['erro'],
 			);
 		}
@@ -133,6 +138,23 @@ class Aduela_Sincronizacao {
 		 */
 		$sem_produto = 0;
 
+		/*
+		 * **O que fazer com um artigo que esta loja não tem**, e vem das
+		 * definições: `nao`, `rascunho` ou `publicar`.
+		 *
+		 * Nasce em `nao`, que é o que o plugin sempre fez, e por duas razões. Uma
+		 * é não mudar o comportamento de quem já o tem instalado por causa de uma
+		 * atualização. A outra é a de sempre: um produto criado sozinho vai direto
+		 * para a montra sem fotografia e sem categoria, e ninguém o viu antes de
+		 * ele lá estar.
+		 *
+		 * Quem quer escolher um a um tem o ecrã do catálogo, que é onde a decisão
+		 * é mesmo de quem carrega.
+		 */
+		$opcoes  = Aduela_Definicoes::opcoes();
+		$criar   = isset( $opcoes['criar_em_falta'] ) ? $opcoes['criar_em_falta'] : 'nao';
+		$criados = 0;
+
 		foreach ( $artigos as $artigo ) {
 			$sku = isset( $artigo['sku'] ) ? trim( (string) $artigo['sku'] ) : '';
 			if ( '' === $sku ) {
@@ -141,7 +163,25 @@ class Aduela_Sincronizacao {
 
 			$id = wc_get_product_id_by_sku( $sku );
 			if ( ! $id ) {
-				++$sem_produto;
+				if ( 'nao' === $criar ) {
+					++$sem_produto;
+					continue;
+				}
+
+				$feito = Aduela_Catalogo::publicar(
+					$artigo,
+					'rascunho' === $criar ? 'draft' : 'publish'
+				);
+
+				// **Uma criação falhada conta como em falta, e não como criada.**
+				// O número existe para dizer o que não está na loja, e uma falha
+				// deixa o artigo exatamente onde estava.
+				if ( is_wp_error( $feito ) ) {
+					++$sem_produto;
+					continue;
+				}
+
+				++$criados;
 				continue;
 			}
 
@@ -190,6 +230,7 @@ class Aduela_Sincronizacao {
 			'artigos'     => $mexidos,
 			'vieram'      => count( $artigos ),
 			'sem_produto' => $sem_produto,
+			'criados'     => $criados,
 			'erro'        => '',
 		);
 	}
