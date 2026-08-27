@@ -207,6 +207,19 @@ class Aduela_Encomendas {
 				'morada' => $encomenda->get_formatted_shipping_address(),
 			),
 			'notas'      => $encomenda->get_customer_note(),
+			/*
+			 * **Se o dinheiro já entrou.** Cartão `36.30`.
+			 *
+			 * O Aduela usa isto para decidir em que estado a encomenda entra na
+			 * Loja online: paga entra aceite, com a fatura na hora; à cobrança
+			 * entra por tratar, e a fatura sai quando o lojista a aceitar.
+			 *
+			 * **`is_paid()` e não o estado.** Uma encomenda em `processing` pode
+			 * estar paga (cartão) ou não (pagamento na entrega), e é o WooCommerce
+			 * que sabe a diferença: ele marca a data de pagamento quando o
+			 * dinheiro confirma, seja qual for o método.
+			 */
+			'paga'       => $encomenda->is_paid(),
 		);
 
 		$resposta = $cliente->enviar( '/api/v1/integracoes/canais/encomendas', $corpo );
