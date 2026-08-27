@@ -23,6 +23,18 @@ dele.
 **Casa-se pelo SKU.** O nome muda; o SKU é o que ninguém mexe depois de o
 começar a usar.
 
+**Os preços viajam com IVA, nos dois sentidos.** O Aduela guarda-os sem imposto
+e acrescenta-o ao faturar; uma montra mostra ao consumidor o que ele paga. É o
+preço final que desce para a loja, e é o preço final que sobe nas encomendas: o
+Aduela decompõe-no com a taxa da ficha do artigo, para a fatura totalizar, ao
+cêntimo, o que o comprador pagou.
+
+**Se o WooCommerce estiver a acrescentar imposto ao preço, o plugin avisa.** Nessa
+configuração o comprador pagaria o IVA duas vezes: uma que já vinha no número, e
+outra que a loja soma. A correção é pôr *"introduzir preços com imposto"* em
+**WooCommerce → Definições → Imposto**, e o plugin não lhe mexe sozinho: as regras
+de imposto valem para tudo o que a loja vende.
+
 ## Pôr os artigos do Aduela à venda
 
 Em **WooCommerce → Catálogo do Aduela** está o catálogo inteiro, com o que esta
@@ -33,8 +45,9 @@ loja já tem ao lado. Cada artigo que a loja não tenha traz dois botões:
 
 E em cima há os dois equivalentes para **todos os que faltam de uma vez**.
 
-Um produto criado assim leva o SKU, o nome, a descrição da ficha, o preço, a
-existência e **a fotografia do artigo**, copiada para a biblioteca do WordPress.
+Um produto criado assim leva o SKU, o nome, a descrição da ficha, o preço **com
+IVA**, a existência e **a fotografia do artigo**, copiada para a biblioteca do
+WordPress.
 Não leva categoria nem texto de venda, e o IVA fica pelas regras de imposto da
 loja: são as decisões de quem vende no site, e o ERP não as sabe.
 

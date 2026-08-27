@@ -192,8 +192,28 @@ class Aduela_Sincronizacao {
 
 			$mudou = false;
 
-			if ( isset( $artigo['preco'] ) ) {
-				$preco = wc_format_decimal( $artigo['preco'] );
+			/*
+			 * **O preço que se repõe é o final, com imposto.** Cartão `36.31`.
+			 *
+			 * O Aduela guarda preços sem imposto e acrescenta-o ao faturar; uma
+			 * montra mostra ao consumidor o que ele paga. Enquanto aqui se usou o
+			 * `preco`, a loja cobrava a base e o Aduela faturava a base mais o
+			 * imposto: o comprador recebia um documento com um total que nunca
+			 * viu, e a diferença era exatamente o IVA.
+			 *
+			 * O `preco` cru continua a vir na resposta, e é a base. Um Aduela
+			 * anterior a este cartão não manda `preco_com_iva`, e aí usa-se o que
+			 * há: é o comportamento antigo, e não uma regressão nova.
+			 */
+			$doAduela = '';
+			if ( isset( $artigo['preco_com_iva'] ) && '' !== $artigo['preco_com_iva'] ) {
+				$doAduela = $artigo['preco_com_iva'];
+			} elseif ( isset( $artigo['preco'] ) ) {
+				$doAduela = $artigo['preco'];
+			}
+
+			if ( '' !== $doAduela ) {
+				$preco = wc_format_decimal( $doAduela );
 
 				if ( wc_format_decimal( $produto->get_regular_price() ) !== $preco ) {
 					$produto->set_regular_price( $preco );

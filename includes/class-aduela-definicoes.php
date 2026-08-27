@@ -196,6 +196,36 @@ class Aduela_Definicoes {
 		exit;
 	}
 
+	/**
+	 * Diz se as regras de imposto desta loja fazem cobrar o IVA duas vezes.
+	 *
+	 * # O que se está a evitar
+	 *
+	 * O Aduela manda o preço **com imposto**, porque é o que o comprador paga e
+	 * o que a fatura dele vai totalizar. Se o WooCommerce estiver configurado
+	 * para **acrescentar** imposto ao preço que se lhe escreve, o comprador paga
+	 * o imposto duas vezes: uma que já vinha no número, e outra que a loja soma.
+	 *
+	 * As três configurações e o que acontece em cada uma:
+	 *
+	 * - **Sem imposto no WooCommerce:** ele cobra o número tal e qual. Certo.
+	 * - **Com imposto, preços introduzidos com imposto:** ele mostra o número tal
+	 *   e qual e reparte-o por dentro. Certo, e é a configuração recomendada.
+	 * - **Com imposto, preços introduzidos sem imposto:** ele soma a taxa por
+	 *   cima. **É esta que se avisa.**
+	 *
+	 * Avisa-se em vez de se corrigir: as regras de imposto de uma loja são do
+	 * lojista e do contabilista dele, e um plugin que as mude sozinho mexe na
+	 * faturação de tudo o que ele vende, e não só do que veio do Aduela.
+	 */
+	private static function cobra_imposto_por_cima() {
+		if ( ! function_exists( 'wc_tax_enabled' ) || ! wc_tax_enabled() ) {
+			return false;
+		}
+
+		return ! wc_prices_include_tax();
+	}
+
 	public static function desenhar() {
 		$opcoes = self::opcoes();
 		$estado = Aduela_Sincronizacao::estado();
@@ -218,6 +248,25 @@ class Aduela_Definicoes {
 
 			<?php if ( $mau ) : ?>
 				<div class="notice notice-error"><p><?php echo esc_html( $mau ); ?></p></div>
+			<?php endif; ?>
+
+			<?php if ( self::cobra_imposto_por_cima() ) : ?>
+				<div class="notice notice-warning">
+					<p>
+						<strong><?php esc_html_e( 'Esta loja vai cobrar imposto duas vezes.', 'aduela-woocommerce' ); ?></strong>
+						<?php esc_html_e( 'O Aduela manda o preço já com IVA, porque é esse que a fatura dele vai totalizar. O WooCommerce está configurado para acrescentar imposto ao preço, e por isso o comprador paga o IVA duas vezes.', 'aduela-woocommerce' ); ?>
+					</p>
+					<p>
+						<?php
+						printf(
+							/* translators: %s: ligação para as definições de imposto do WooCommerce */
+							esc_html__( 'Em %s, ponha "Introduzir preços com imposto". Não mexemos nisto sozinhos: as regras de imposto valem para tudo o que vende, e não só para o que vem do Aduela.', 'aduela-woocommerce' ),
+							'<a href="' . esc_url( admin_url( 'admin.php?page=wc-settings&tab=tax' ) ) . '">'
+								. esc_html__( 'WooCommerce → Definições → Imposto', 'aduela-woocommerce' ) . '</a>'
+						);
+						?>
+					</p>
+				</div>
 			<?php endif; ?>
 
 			<form method="post" action="options.php">

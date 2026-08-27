@@ -108,7 +108,22 @@ class Aduela_Catalogo {
 				'descricao'  => isset( $bruto['descricao'] ) ? (string) $bruto['descricao'] : '',
 				'codigo'     => isset( $bruto['codigo_barras'] ) ? (string) $bruto['codigo_barras'] : '',
 				'imagem'     => isset( $bruto['imagem_url'] ) ? (string) $bruto['imagem_url'] : '',
-				'preco'      => isset( $bruto['preco'] ) ? $bruto['preco'] : '',
+				/*
+				 * **O preço que vai para a loja é o final, com imposto.**
+				 *
+				 * O Aduela guarda preços sem imposto e acrescenta-o ao faturar;
+				 * uma montra mostra ao consumidor o que ele paga. Enquanto aqui
+				 * se usou o `preco`, a loja cobrava menos imposto do que a
+				 * fatura dizia, e o comprador recebia um documento com um total
+				 * que nunca viu.
+				 *
+				 * O `preco` continua a vir, e é a base sem imposto. O
+				 * `preco_com_iva` é o que se publica.
+				 */
+				'preco'      => isset( $bruto['preco_com_iva'] ) ? $bruto['preco_com_iva']
+					: ( isset( $bruto['preco'] ) ? $bruto['preco'] : '' ),
+				'preco_base' => isset( $bruto['preco'] ) ? $bruto['preco'] : '',
+				'taxa_iva'   => isset( $bruto['taxa_iva'] ) ? $bruto['taxa_iva'] : '',
 				'existencia' => isset( $bruto['existencia'] ) ? $bruto['existencia'] : 0,
 				'produto_id' => (int) $id,
 				'estado'     => $estado,
@@ -147,7 +162,15 @@ class Aduela_Catalogo {
 		 */
 		$nome      = isset( $artigo['nome'] ) ? (string) $artigo['nome'] : '';
 		$descricao = isset( $artigo['descricao'] ) ? (string) $artigo['descricao'] : '';
-		$preco     = isset( $artigo['preco'] ) ? $artigo['preco'] : '';
+		// **O preço com imposto**, que é o que o comprador paga e o que a fatura
+		// do Aduela vai totalizar. O `preco` cru é a base sem imposto: publicá-lo
+		// fazia a loja cobrar menos do que o documento diz. Cartão `36.31`.
+		$preco = '';
+		if ( isset( $artigo['preco_com_iva'] ) && '' !== $artigo['preco_com_iva'] ) {
+			$preco = $artigo['preco_com_iva'];
+		} elseif ( isset( $artigo['preco'] ) ) {
+			$preco = $artigo['preco'];
+		}
 
 		$codigo = '';
 		if ( ! empty( $artigo['codigo'] ) ) {
@@ -516,6 +539,8 @@ class Aduela_Catalogo {
 
 			<p>
 				<?php esc_html_e( 'O que está à venda no Aduela, com o que esta loja tem ao lado. Publicar cria o produto no WooCommerce com o mesmo SKU, e a partir daí a sincronização trata do preço e do stock.', 'aduela-woocommerce' ); ?>
+				<br />
+				<?php esc_html_e( 'Os preços vêm já com IVA, porque é esse que o comprador paga e o que a fatura do Aduela vai totalizar.', 'aduela-woocommerce' ); ?>
 			</p>
 
 			<?php if ( $bom ) : ?>
@@ -590,7 +615,7 @@ class Aduela_Catalogo {
 						<tr>
 							<th style="width:12rem"><?php esc_html_e( 'SKU', 'aduela-woocommerce' ); ?></th>
 							<th><?php esc_html_e( 'Nome no Aduela', 'aduela-woocommerce' ); ?></th>
-							<th style="width:9rem"><?php esc_html_e( 'Preço', 'aduela-woocommerce' ); ?></th>
+							<th style="width:9rem"><?php esc_html_e( 'Preço com IVA', 'aduela-woocommerce' ); ?></th>
 							<th style="width:7rem"><?php esc_html_e( 'Existência', 'aduela-woocommerce' ); ?></th>
 							<th style="width:11rem"><?php esc_html_e( 'Nesta loja', 'aduela-woocommerce' ); ?></th>
 							<th style="width:14rem"></th>

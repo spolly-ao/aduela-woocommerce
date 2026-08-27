@@ -39,7 +39,10 @@ percorrer os dois sentidos:
    confirmar que **Publicar** cria o produto com a imagem. Carregar outra vez no
    mesmo SKU não pode dar um segundo produto.
 3. **Encomendas para cima:** fazer uma encomenda na loja, pagá-la, e confirmar
-   que a venda aparece no Aduela com a referência `WOO-<número>`.
+   que a venda aparece no Aduela com a referência `WOO-<número>` **e com o total
+   igual ao que a loja cobrou**. O total é a parte que interessa: os preços
+   viajam com IVA e o Aduela decompõe-nos, e um erro aqui sai num documento
+   fiscal.
 
 ## Estilo
 
