@@ -1,10 +1,21 @@
 <?php
 /**
- * O ecrã de definições, no painel do WordPress. Cartão `33.3`.
+ * O ecrã de definições, no painel do WordPress.
  *
- * Duas coisas para escrever (o endereço e a chave), um botão para testar, e o
- * estado da última sincronização. Mais nada: tudo o resto configura-se no Aduela,
- * e duplicá-lo aqui daria dois sítios a decidir a mesma coisa.
+ * Duas coisas para escrever (o endereço e a chave), dois botões, e o estado da
+ * última sincronização. Mais nada: tudo o resto configura-se no Aduela, e
+ * duplicá-lo aqui daria dois sítios a decidir a mesma coisa.
+ *
+ * # Os dois botões respondem a perguntas diferentes
+ *
+ * **Testar a ligação** pergunta *"ele responde-me?"*: pede o catálogo e diz
+ * quantos artigos vieram, sem tocar em nada da loja. É o que se carrega depois
+ * de colar a chave.
+ *
+ * **Sincronizar agora** faz a passagem toda, como o `wp-cron` faria: repõe preços
+ * e existências, e manda as encomendas que ficaram por enviar. Existe porque o
+ * `wp-cron` corre nas visitas ao site, e numa loja com pouco movimento pode
+ * demorar horas a acontecer, o que numa instalação nova parece uma avaria.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -18,6 +29,7 @@ class Aduela_Definicoes {
 		add_action( 'admin_menu', array( __CLASS__, 'menu' ) );
 		add_action( 'admin_init', array( __CLASS__, 'campos' ) );
 		add_action( 'admin_post_aduela_testar', array( __CLASS__, 'testar' ) );
+		add_action( 'admin_post_aduela_sincronizar', array( __CLASS__, 'sincronizar' ) );
 	}
 
 	/** O que está gravado, com os valores de origem por cima. */
@@ -97,6 +109,59 @@ class Aduela_Definicoes {
 		} else {
 			set_transient( 'aduela_wc_teste_erro', $resposta['erro'], 60 );
 		}
+
+		wp_safe_redirect( admin_url( 'admin.php?page=aduela-wc' ) );
+		exit;
+	}
+
+	/**
+	 * O botão de sincronizar agora: faz a passagem e diz o que fez.
+	 *
+	 * # A mensagem conta três números, e não um
+	 *
+	 * Quantos vieram do Aduela, quantos foram atualizados aqui, e **quantos não
+	 * existem nesta loja**. O terceiro é o que faltava: o plugin nunca cria
+	 * produtos, e sem esse número um lojista com dez artigos no Aduela e nenhum
+	 * no WooCommerce via uma sincronização "bem sucedida" que não mexeu em nada,
+	 * sem forma nenhuma de perceber porquê.
+	 */
+	public static function sincronizar() {
+		if ( ! current_user_can( self::CAPACIDADE ) ) {
+			wp_die( esc_html__( 'Sem permissão.', 'aduela-woocommerce' ) );
+		}
+
+		check_admin_referer( 'aduela_sincronizar' );
+
+		$feito = Aduela_Sincronizacao::passar();
+
+		if ( ! empty( $feito['erro'] ) ) {
+			set_transient( 'aduela_wc_teste_erro', $feito['erro'], 60 );
+
+			wp_safe_redirect( admin_url( 'admin.php?page=aduela-wc' ) );
+			exit;
+		}
+
+		$mensagem = sprintf(
+			/* translators: 1: artigos recebidos, 2: artigos atualizados */
+			__( 'Sincronizado. Vieram %1$d artigos do Aduela, e %2$d foram atualizados aqui.', 'aduela-woocommerce' ),
+			(int) $feito['vieram'],
+			(int) $feito['artigos']
+		);
+
+		if ( ! empty( $feito['sem_produto'] ) ) {
+			$mensagem .= ' ' . sprintf(
+				/* translators: %d: artigos sem produto correspondente */
+				_n(
+					'%d artigo do Aduela não existe nesta loja e foi ignorado: o plugin não cria produtos, casa-os pelo SKU.',
+					'%d artigos do Aduela não existem nesta loja e foram ignorados: o plugin não cria produtos, casa-os pelo SKU.',
+					(int) $feito['sem_produto'],
+					'aduela-woocommerce'
+				),
+				(int) $feito['sem_produto']
+			);
+		}
+
+		set_transient( 'aduela_wc_teste', $mensagem, 60 );
 
 		wp_safe_redirect( admin_url( 'admin.php?page=aduela-wc' ) );
 		exit;
@@ -185,8 +250,23 @@ class Aduela_Definicoes {
 						<td><strong><?php echo esc_html( $estado['quando'] ); ?></strong></td>
 					</tr>
 					<tr>
+						<td><?php esc_html_e( 'Artigos que vieram do Aduela', 'aduela-woocommerce' ); ?></td>
+						<td><strong><?php echo esc_html( $estado['vieram'] ); ?></strong></td>
+					</tr>
+					<tr>
 						<td><?php esc_html_e( 'Artigos atualizados na última passagem', 'aduela-woocommerce' ); ?></td>
 						<td><strong><?php echo esc_html( $estado['artigos'] ); ?></strong></td>
+					</tr>
+					<tr>
+						<td><?php esc_html_e( 'Do Aduela, e sem produto nesta loja', 'aduela-woocommerce' ); ?></td>
+						<td>
+							<strong><?php echo esc_html( $estado['sem_produto'] ); ?></strong>
+							<?php if ( $estado['sem_produto'] ) : ?>
+								<p class="description">
+									<?php esc_html_e( 'O plugin casa pelo SKU e não cria produtos. Crie-os no WooCommerce com o mesmo SKU do Aduela, e a passagem seguinte trata do preço e do stock.', 'aduela-woocommerce' ); ?>
+								</p>
+							<?php endif; ?>
+						</td>
 					</tr>
 					<tr>
 						<td><?php esc_html_e( 'Encomendas por enviar', 'aduela-woocommerce' ); ?></td>
@@ -199,7 +279,13 @@ class Aduela_Definicoes {
 				</tbody>
 			</table>
 
-			<p style="margin-top:1rem">
+			<p style="margin-top:1rem;display:flex;gap:.5rem;align-items:center">
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline">
+					<input type="hidden" name="action" value="aduela_sincronizar" />
+					<?php wp_nonce_field( 'aduela_sincronizar' ); ?>
+					<?php submit_button( __( 'Sincronizar agora', 'aduela-woocommerce' ), 'primary', 'submit', false ); ?>
+				</form>
+
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline">
 					<input type="hidden" name="action" value="aduela_testar" />
 					<?php wp_nonce_field( 'aduela_testar' ); ?>

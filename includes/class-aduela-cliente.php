@@ -1,6 +1,6 @@
 <?php
 /**
- * O cliente HTTP do Aduela. Cartão `33.3`.
+ * O cliente HTTP do Aduela.
  *
  * Um sítio só a falar com a API, para o resto do plugin não repetir cabeçalhos,
  * tempos-limite e tratamento de erros em cada chamada.

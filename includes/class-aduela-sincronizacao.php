@@ -1,6 +1,6 @@
 <?php
 /**
- * O catálogo e o stock, que descem do Aduela. Cartão `33.3`.
+ * O catálogo e o stock, que descem do Aduela.
  *
  * # A regra de conflito, e é a mesma dos dois canais
  *
@@ -39,21 +39,34 @@ class Aduela_Sincronizacao {
 		$quando = isset( $gravado['quando'] ) ? (int) $gravado['quando'] : 0;
 
 		return array(
-			'quando'     => $quando
+			'quando'      => $quando
 				? human_time_diff( $quando ) . ' ' . __( 'atrás', 'aduela-woocommerce' )
 				: __( 'Ainda não correu.', 'aduela-woocommerce' ),
-			'artigos'    => isset( $gravado['artigos'] ) ? (int) $gravado['artigos'] : 0,
-			'erro'       => isset( $gravado['erro'] ) ? $gravado['erro'] : '',
-			'por_enviar' => Aduela_Encomendas::quantas_por_enviar(),
+			'artigos'     => isset( $gravado['artigos'] ) ? (int) $gravado['artigos'] : 0,
+			'vieram'      => isset( $gravado['vieram'] ) ? (int) $gravado['vieram'] : 0,
+			'sem_produto' => isset( $gravado['sem_produto'] ) ? (int) $gravado['sem_produto'] : 0,
+			'erro'        => isset( $gravado['erro'] ) ? $gravado['erro'] : '',
+			'por_enviar'  => Aduela_Encomendas::quantas_por_enviar(),
 		);
 	}
 
-	/** Uma passagem completa: catálogo para baixo, encomendas para cima. */
+	/**
+	 * Uma passagem completa: catálogo para baixo, encomendas para cima.
+	 *
+	 * Devolve o que fez, para o botão de sincronizar agora o poder dizer. O
+	 * `wp-cron` ignora o valor, e é por isso que ele também se grava na opção do
+	 * estado: a passagem automática não tem a quem responder.
+	 */
 	public static function passar() {
 		$cliente = Aduela_Cliente::das_definicoes();
 
 		if ( ! $cliente->configurado() ) {
-			return;
+			return array(
+				'artigos'     => 0,
+				'vieram'      => 0,
+				'sem_produto' => 0,
+				'erro'        => __( 'Falta o endereço ou a chave.', 'aduela-woocommerce' ),
+			);
 		}
 
 		$resultado = self::descer_catalogo( $cliente );
@@ -66,12 +79,16 @@ class Aduela_Sincronizacao {
 		update_option(
 			self::ESTADO,
 			array(
-				'quando'  => time(),
-				'artigos' => $resultado['artigos'],
-				'erro'    => $resultado['erro'],
+				'quando'      => time(),
+				'artigos'     => $resultado['artigos'],
+				'vieram'      => $resultado['vieram'],
+				'sem_produto' => $resultado['sem_produto'],
+				'erro'        => $resultado['erro'],
 			),
 			false
 		);
+
+		return $resultado;
 	}
 
 	/**
@@ -85,16 +102,36 @@ class Aduela_Sincronizacao {
 	 * produtos aqui era criar montra por conta do lojista: fotografias em falta,
 	 * descrições vazias e categorias erradas, num sítio que é a cara do negócio
 	 * dele. Quem decide o que está à venda no site é ele.
+	 *
+	 * **O que mudou é a decisão deixar de ser silenciosa.** Ela continua igual, e
+	 * o que se conta agora é quantos artigos ficaram de fora por não existirem
+	 * aqui: sem esse número, quem instala o plugin e não vê nada a mexer não tem
+	 * como descobrir que a bola está do lado dele.
 	 */
 	private static function descer_catalogo( $cliente ) {
 		$resposta = $cliente->obter( '/api/v1/integracoes/canais/catalogo' );
 
 		if ( ! $resposta['ok'] ) {
-			return array( 'artigos' => 0, 'erro' => $resposta['erro'] );
+			return array(
+				'artigos'     => 0,
+				'vieram'      => 0,
+				'sem_produto' => 0,
+				'erro'        => $resposta['erro'],
+			);
 		}
 
 		$artigos = isset( $resposta['dados']['artigos'] ) ? $resposta['dados']['artigos'] : array();
 		$mexidos = 0;
+
+		/*
+		 * Quantos artigos do Aduela é que esta loja não tem.
+		 *
+		 * **É o número que faltava para isto se perceber.** Um lojista que ligue
+		 * o plugin e não veja nada acontecer não tem como saber se o Aduela não
+		 * mandou nada ou se mandou e nenhum SKU casou; e como a passagem salta
+		 * em silêncio o que não encontra, as duas situações davam o mesmo ecrã.
+		 */
+		$sem_produto = 0;
 
 		foreach ( $artigos as $artigo ) {
 			$sku = isset( $artigo['sku'] ) ? trim( (string) $artigo['sku'] ) : '';
@@ -104,6 +141,7 @@ class Aduela_Sincronizacao {
 
 			$id = wc_get_product_id_by_sku( $sku );
 			if ( ! $id ) {
+				++$sem_produto;
 				continue;
 			}
 
@@ -148,6 +186,11 @@ class Aduela_Sincronizacao {
 			}
 		}
 
-		return array( 'artigos' => $mexidos, 'erro' => '' );
+		return array(
+			'artigos'     => $mexidos,
+			'vieram'      => count( $artigos ),
+			'sem_produto' => $sem_produto,
+			'erro'        => '',
+		);
 	}
 }

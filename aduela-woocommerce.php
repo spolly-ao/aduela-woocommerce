@@ -14,7 +14,7 @@
  * Domain Path:       /idiomas
  * License:           GPL-2.0-or-later
  *
- * # O que este plugin é. Cartão `33.3`
+ * # O que este plugin é
  *
  * A metade PHP da integração. A outra metade é o módulo `canais` do Aduela, e o
  * motor de sincronização vive lá: aqui não há regras de negócio nenhumas, só a

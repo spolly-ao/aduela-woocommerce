@@ -1,6 +1,6 @@
 <?php
 /**
- * As encomendas, que sobem para o Aduela. Cartão `33.3`.
+ * As encomendas, que sobem para o Aduela.
  *
  * # Duas oportunidades, e é de propósito
  *
